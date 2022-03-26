@@ -303,10 +303,11 @@ int si, sj, ti, tj;
 ld p;
 mat<int> h(SIZE, vi(SIZE - 1)), v(SIZE - 1, vi(SIZE));
 vector<mat<ld>> dp(MAXLEN + 1, mat<ld>(SIZE, vector<ld>(SIZE, 0)));
-ld compute_score(string &ans) {
+template <typename T> ld calc_score(string &ans, int st = 0) {
     ld ex = 0;
-    dp[0][si][sj] = 1;
-    rep(t, ans.size()) {
+    if (st == 0)
+        dp[0][si][sj] = 1;
+    rep(t, st, ans.size()) {
         char c = ans[t];
         rep(i, SIZE) rep(j, SIZE) {
             dp[t + 1][i][j] = 0;
@@ -335,7 +336,52 @@ ld compute_score(string &ans) {
         }
         ex += dp[t + 1][ti][tj] * (400 - t);
     }
-    return ex;
+    return ex * 250000;
+}
+
+long long xor64(long long range) {
+    static uint64_t x = 88172645463325252ULL;
+    x ^= x << 13;
+    x ^= x >> 7;
+    return (x ^= x << 17) % range;
+}
+
+using State = string;
+Timer timer;
+
+string udlr = "UDLR";
+State modify(State state) {
+    int l = state.size();
+    int i = xor64(l);
+    assert(i < l);
+    state[i] = udlr[xor64(4)];
+
+    return state;
+}
+
+template <typename T> State sa(State state) {
+    const double TIME_LIMIT = 1950;
+    double start_temp = 50, end_temp = 5; // 適当な値を入れる（後述）
+    int it = 0;
+    T pre_score = calc_score<T>(state);
+    while (timer.lap() < TIME_LIMIT) { // 時間の許す限り回す
+        State new_state = modify(state);
+        T new_score = calc_score<T>(new_state);
+        // 温度関数
+        double temp = start_temp + (end_temp - start_temp) * timer.lap() / TIME_LIMIT;
+        // 遷移確率関数(最大化の場合)
+        double prob = new_score > pre_score ? 1 : exp((new_score - pre_score) / temp);
+
+        if (prob > (double)xor64(inf) / inf) { // 確率probで遷移する
+            state = new_state;
+            pre_score = new_score;
+        }
+        if (it % 1 == 0) {
+            cerr << pre_score << ' ' << prob << endl;
+        }
+        it++;
+    }
+    return state;
 }
 
 int main() {
@@ -355,11 +401,6 @@ int main() {
     }
     string ans = "RDLRLRRDUUDRLURDRRDDLRLRUURUUUUDRDRUUDLRUDLLDDDDURLRUDDLDRDLRLLLLUDRUDRRULRULRDLRLDLLUUULDLUURRLRDRRR"
                  "RDULDRLRRRRDDDDDRULDDURDDDRDLRRLDLDLDLRLLLUDDRDDDUURUDDLLLUULLLLDLUDRLLDLLULRLDLDDRLDRDLURURULRDDDR";
-    // // rep(i, SIZE) {
-    // //     rep(j, SIZE) {
-    // //         cout << int(dp[ans.size()][i][j] * 10000) << ' ';
-    // //     }
-    // //     cout << endl;
-    // // }
+    ans = sa<ld>(ans);
     cout << ans << endl;
 }
