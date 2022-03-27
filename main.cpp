@@ -303,6 +303,8 @@ int si, sj, ti, tj;
 ld p;
 mat<int> h(SIZE, vi(SIZE - 1)), v(SIZE - 1, vi(SIZE));
 vector<mat<ld>> dp(MAXLEN + 1, mat<ld>(SIZE, vector<ld>(SIZE, 0)));
+auto tmp = dp;
+int change_i = -1;
 template <typename T> ld calc_score(string &ans, int st = 0) {
     ld ex = 0;
     if (st == 0)
@@ -334,6 +336,8 @@ template <typename T> ld calc_score(string &ans, int st = 0) {
             dp[t + 1][i + dx][j + dy] += (1 - p) * dp[t][i][j];
             dp[t + 1][i][j] += p * dp[t][i][j];
         }
+    }
+    rep(t, ans.size()) {
         ex += dp[t + 1][ti][tj] * (400 - t);
     }
     return ex * 250000;
@@ -351,11 +355,13 @@ Timer timer;
 
 string udlr = "UDLR";
 State modify(State state) {
-    int l = state.size();
-    int i = xor64(l);
-    assert(i < l);
-    state[i] = udlr[xor64(4)];
-
+    int i = xor64(MAXLEN);
+    int j = xor64(4);
+    if (udlr[j] == state[i]) {
+        j = (j + 1) % 4;
+    }
+    state[i] = udlr[j];
+    change_i = i;
     return state;
 }
 
@@ -366,7 +372,13 @@ template <typename T> State sa(State state) {
     T pre_score = calc_score<T>(state);
     while (timer.lap() < TIME_LIMIT) { // 時間の許す限り回す
         State new_state = modify(state);
-        T new_score = calc_score<T>(new_state);
+        T new_score;
+        if (change_i > 100) {
+            tmp = dp;
+            new_score = calc_score<T>(new_state, change_i);
+        } else {
+            new_score = calc_score<T>(new_state, 0);
+        }
         // 温度関数
         double temp = start_temp + (end_temp - start_temp) * timer.lap() / TIME_LIMIT;
         // 遷移確率関数(最大化の場合)
@@ -375,10 +387,12 @@ template <typename T> State sa(State state) {
         if (prob > (double)xor64(inf) / inf) { // 確率probで遷移する
             state = new_state;
             pre_score = new_score;
+        } else if (change_i > 100) {
+            dp = tmp;
         }
-        if (it % 1 == 0) {
-            cerr << pre_score << ' ' << prob << endl;
-        }
+        // if (it % 1 == 0) {
+        //     cerr << it << ' ' << pre_score << ' ' << prob << endl;
+        // }
         it++;
     }
     return state;
